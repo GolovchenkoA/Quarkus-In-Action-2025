@@ -20,3 +20,23 @@
 ## Quarkus in Action 2025 links
 - Code https://github.com/xstefank/quarkus-in-action
 - MicroProfile https://microprofile.io/
+- Migration Toolkit for Applications 7.3 https://docs.redhat.com/en/documentation/migration_toolkit_for_applications/7.3
+- Micronaut and Helidon (helidon.io)
+
+### How to update Quarkus version
+supports LTS https://github.com/quarkusio/quarkus/releases)
+- Maven ./mvn quarkus:update
+- Gradle ./gradlew quarkusUpdate
+- CLI quarkus update
+
+### Quarkus provides built-in support for generating Dockerfiles (and Kubernetes resources) using its container image extensions, particularly:
+quarkus-container-image-docker
+
+quarkus-container-image-jib
+
+quarkus-container-image-buildpack
+
+You can configure Quarkus to automatically generate Dockerfiles when you build your application
+
+```bash
+quarkus extension add quarkus-container-image-docker
