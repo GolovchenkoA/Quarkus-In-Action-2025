@@ -40,3 +40,36 @@ You can configure Quarkus to automatically generate Dockerfiles when you build y
 
 ```bash
 quarkus extension add quarkus-container-image-docker
+```
+
+### Wways to generate a Quarkus application:
+
+1. Using the Quarkus CLI
+quarkus create app com.example:my-app
+
+2. Using the Quarkus Web Code Generator
+https://code.quarkus.io
+
+3. Using the Maven Plugin
+Add -DbuildTool=gradle system propery if a project should be generated with Gradle
+```bash
+mvn io.quarkus:quarkus-maven-plugin:<version>:create
+```
+
+
+### 🚀 Running the Application in Dev Mode
+
+Quarkus supports live coding with dev mode. Use the following command based on your build tool:
+
+- **Maven**  
+  ```bash
+  ./mvnw quarkus:dev
+  ```
+- **Gradle**  
+  ```bash
+  ./gradlew quarkusDev
+  ```
+- **Quarkus CLI**  
+  ```bash
+  quarkus dev
+  ```
