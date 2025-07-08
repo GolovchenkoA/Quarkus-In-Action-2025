@@ -455,4 +455,4 @@ https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b9
 import.sql can be created in `src/main/resources/`. This feature is disabled for PROD by default.  See https://quarkus.io/guides/hibernate-orm-panache
 
 ### GraphQL @Transacrional annotation
-The annotation should be used when we make calls to a DB. [GraphQLInventoryService Example](https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-07/7_2_2/inventory-service/src/main/java/org/acme/inventory/service/GraphQLInventoryService.java)
+The annotation should be used when we make calls to a DB. [GraphQLInventoryService](https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-07/7_2_2/inventory-service/src/main/java/org/acme/inventory/service/GraphQLInventoryService.java) and [GrpcInventoryService](https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-07/7_2_2/inventory-service/src/main/java/org/acme/inventory/grpc/GrpcInventoryService.java)
