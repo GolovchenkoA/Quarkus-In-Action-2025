@@ -207,10 +207,34 @@ If you want continuous testing to start automatically you can set quarkus.test.c
 ```
 quarkus create app com.example:openapi-app  --extensions=quarkus-smallrye-openapi
 
+# We don't need to provide the full name of the extension (in this case quarkus-rest-jackson), it's long enough for Quarkus to understand which extention should be used
 quarkus create app com.example:openapi-app -P 3.15.1 \
-  --extensions="quarkus-smallrye-openapi, resteasy-reactive"
+  --extensions="quarkus-smallrye-openapi, quarkus-rest"
 
+#  use quarkus-rest-client-jackson if you need to call downstream services
 quarkus create app com.example:openapi-app \
   --extensions quarkus-smallrye-openapi, quarkus-rest-jackson, quarkus-rest-client-jackson \
   --no-code
 ```
+
+
+### GraphQL Smallrye
+Code First approach. QraphQL schema is generated from Java code
+https://quarkus.io/guides/smallrye-graphql
+
+
+### Dynamic GraphQL Client
+The Quarkus Dynamic GraphQL Client is a runtime-based, flexible client for making GraphQL requests without needing to generate or predefine Java classes or interfaces.
+
+🧠 In short: You build and send GraphQL queries dynamically using a fluent Java API — no code generation, no strongly typed stubs.
+
+✅ When to Use It
+Use the dynamic client when:
+
+You want to build GraphQL queries at runtime (e.g., based on user input or conditions)
+
+The GraphQL schema is too large or changes frequently
+
+You don't want to generate Java models for all types
+
+You need to interact with remote GraphQL APIs flexibly
