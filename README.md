@@ -23,7 +23,10 @@
 - Migration Toolkit for Applications 7.3 https://docs.redhat.com/en/documentation/migration_toolkit_for_applications/7.3
 - Micronaut and Helidon (helidon.io)
 - HTTPIe https://httpie.io/download
+- Quarkiverse. Quarkus user community extensions https://hub.quarkiverse.io/
 - Quarkus all configs https://quarkus.io/guides/all-config
+- Optimize a Native Executable with Profile-Guided Optimization https://www.graalvm.org/latest/reference-manual/native-image/guides/optimize-native-executable-with-pgo/
+- 3 types of docker images: JVM, Native and Native Micro: https://github.com/xstefank/quarkus-in-action/tree/main/chapter-02/2_1_1/quarkus-in-action/src/main/docker
 
 ### How to update Quarkus version
 supports LTS https://github.com/quarkusio/quarkus/releases)
@@ -153,4 +156,61 @@ Quarkus supports native image generation out of the box using GraalVM (or contai
 - **CLI**
 ```bash
 quarkus build --native
+```
+
+
+### How to list installed extensions
+List extension for quarkus app if run from the app's directory or list all available quarkus extensions if run from any other directory
+```bash
+quarkus extension list
+quarkus ext list
+quarkus extension list --full
+quarkus extension --installable
+quarkus extension categories
+```
+
+## Chatper 3. Enchansing developer productivity with Quarkus
+
+### Quarkus Dev Services 
+is a feature that automatically provisions and configures required services (like databases, Kafka, Redis, etc.) during development and testing—without needing you to manually start them.
+It’s designed to improve developer productivity by reducing setup time.
+
+### Live reload
+search quarkus.live-reload on https://quarkus.io/guides/all-config
+Pay attention to [the #quarkus-core_quarkus-live-reload-instrumentation](https://quarkus.io/guides/all-config#quarkus-core_quarkus-live-reload-instrumentation)
+
+### MicroProfile Config support
+https://microprofile.io/specifications/microprofile-config/
+
+### Property priorities
+https://quarkus.io/guides/config-reference#:~:text=The%20loading%20starts%20from%20the%20config%20folder%20and,loading%20order%29.%20This%20is%20a%20user-defined%20configuration%20property.
+
+### Quarkus Dev UI
+https://quarkus.io/guides/dev-ui
+Quarkus Dev UI is a developer-friendly user interface that comes to life when you run your application in development mode (./mvnw quarkus:dev). It serves as a powerful portal for exploring, debugging, and interacting with your application - all while it’s running - with zero code changes or restarts.
+
+### Dev Services
+https://quarkus.io/guides/dev-services
+
+### Keycloak and OpneID integration 
+https://quarkus.io/guides/security-keycloak-authorization#:~:text=The%20Keycloak%20Authorization%20extension%2C%20quarkus-keycloak-authorization%2C%20extends%20the%20OpenID,enforcer%20that%20dynamically%20manages%20access%20to%20secured%20resources.
+
+
+### Continuous testing
+https://quarkus.io/guides/continuous-testing
+If you want continuous testing to start automatically you can set quarkus.test.continuous-testing=enabled in application.properties. If you don’t want it at all you can change this to disabled.
+
+
+## Chapter 4
+
+### Quarkus CLI app creating
+```
+quarkus create app com.example:openapi-app  --extensions=quarkus-smallrye-openapi
+
+quarkus create app com.example:openapi-app -P 3.15.1 \
+  --extensions="quarkus-smallrye-openapi, resteasy-reactive"
+
+quarkus create app com.example:openapi-app \
+  --extensions quarkus-smallrye-openapi, quarkus-rest-jackson, quarkus-rest-client-jackson \
+  --no-code
 ```
