@@ -393,7 +393,7 @@ public class MyServiceStaggingTest {
 }
 ```
 
-### Mocking. Importent!!!!
+### Mocking. Important!!!!
 - Native mode isn't supported for tests that use mocks or CDI injections into the test itself because the application under test runs in a different OS process that the testing logic.
 - Mocking is achieved either by replacing a CDI bean with an alternative implementation or by describing the mock's behavior using Mockito DSL
 
