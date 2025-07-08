@@ -19,6 +19,8 @@
 
 ## Quarkus in Action 2025 links
 - Code https://github.com/xstefank/quarkus-in-action
+- Quick Starts https://github.com/quarkusio/quarkus-quickstarts
+- Quarkus Security https://quarkus.io/guides/security-overview
 - MicroProfile https://microprofile.io/
 - Migration Toolkit for Applications 7.3 https://docs.redhat.com/en/documentation/migration_toolkit_for_applications/7.3
 - Micronaut and Helidon (helidon.io)
@@ -27,6 +29,7 @@
 - Quarkus all configs https://quarkus.io/guides/all-config
 - Optimize a Native Executable with Profile-Guided Optimization https://www.graalvm.org/latest/reference-manual/native-image/guides/optimize-native-executable-with-pgo/
 - 3 types of docker images: JVM, Native and Native Micro: https://github.com/xstefank/quarkus-in-action/tree/main/chapter-02/2_1_1/quarkus-in-action/src/main/docker
+
 
 ### How to update Quarkus version
 supports LTS https://github.com/quarkusio/quarkus/releases)
@@ -304,11 +307,13 @@ public class MockRestApiClient implements RestApiClient {
 }
 ```
 2. Mockito Framework.
-   
 Mocking with Mockito, as opposed to using CDI alternatives, is not limited to using only CDI beans. 
 Any object can be replaced with a mock. When used with CDI, the bean has to be of a normal scope, 
 which means @Singleton and @Dependent beans can't be mocked out (because Mockito needs to use proxies for such beans,
 and these to scopes a non-proxyable). All other built-in CDI scopes will work.
+
+
+!!! In most cases the recommended pattern is to use @QuarkusTest for test in JVM mode and @QuarkusIntegrationTest for tests in native mode, where the integration test case can inherit the test case and can disable some tests it they are not compatible with native mode by using @DisabledOnIntegrationTest(forArtifactTypes = {"native"})
 
 
 ### QuarkusMock.installMockForType()
@@ -396,6 +401,58 @@ public class MyServiceStaggingTest {
 ### Mocking. Important!!!!
 - Native mode isn't supported for tests that use mocks or CDI injections into the test itself because the application under test runs in a different OS process that the testing logic.
 - Mocking is achieved either by replacing a CDI bean with an alternative implementation or by describing the mock's behavior using Mockito DSL
+- Testing Profiles ogranize test into groups that run with a separate application instance and might with a different configuration
+- Dev Servies manages databases, messages, etc instances when we run the application in Dev mode.
 
 
 ## Chapter 6. Exposing and Security Web Applications
+
+In this chapter they use:
+1. HTML\AJAX
+2. Qute is the server-side templating engine used in Quarkus. It's designed to be:
+- Fast (both at runtime and compile time)
+- Type-safe
+- Lightweight and GraalVM native-image friendly
+- Inspired by popular engines like Mustache and Thymeleaf, but more Quarkus-optimized
+
+
+Quarkus CLI app generation:
+```
+quarkus create app org.acme:users-service -P 3.15.1 \
+--extension qute,rest-qute,oidc,rest-client-jackson, \
+quarkus-rest-client-oidc-token-propagation --no-code
+```
+
+### Docker Compose example
+https://github.com/xstefank/quarkus-in-action/tree/0a7e10d43fd36a2f29104900418b91941b814233/chapter-06/production
+
+### Qute Checked Templates
+Different approach with type-save templates by using @CheckedTemplate annotation. The annotation is applied to static classes
+
+
+### Security Doc
+https://quarkus.io/guides/security-overview
+
+
+## Chapter 7 DB Access
+Panache https://quarkus.io/guides/hibernate-orm-panache 
+Extension implements Active Record pattern and Repository pattern.
+Active record pattern allows to call DB actions directly from Entity class using static methods. Example:
+```
+User.findById(user.id)
+```
+
+### DB Zero-config in DEV mode
+[Zero-config setup in development mode](https://quarkus.io/guides/datasource#dev-services)
+
+### Fixed DB port for DEV mode
+https://quarkus.io/guides/datasource#quarkus-datasource_quarkus-datasource-devservices-port
+
+### Persistence Test example
+https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-07/7_4/reservation-service/src/test/java/org/acme/reservation/ReservationPersistenceTest.java#L13
+
+### Panache supports sql scripts for DB initialization
+import.sql can be created in `src/main/resources/`. This feature is disabled for PROD by default.  See https://quarkus.io/guides/hibernate-orm-panache
+
+### GraphQL @Transacrional annotation
+The annotation should be used when we make calls to a DB. [GraphQLInventoryService Example](https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-07/7_2_2/inventory-service/src/main/java/org/acme/inventory/service/GraphQLInventoryService.java)
