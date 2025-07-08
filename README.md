@@ -303,8 +303,99 @@ public class MockRestApiClient implements RestApiClient {
     }
 }
 ```
-2. Mockito Framework. 
+2. Mockito Framework.
+   
 Mocking with Mockito, as opposed to using CDI alternatives, is not limited to using only CDI beans. 
 Any object can be replaced with a mock. When used with CDI, the bean has to be of a normal scope, 
 which means @Singleton and @Dependent beans can't be mocked out (because Mockito needs to use proxies for such beans,
 and these to scopes a non-proxyable). All other built-in CDI scopes will work.
+
+
+### QuarkusMock.installMockForType()
+QuarkusMock.installMockForType() is a test-time utility method provided by Quarkus to dynamically replace a CDI bean with a mock programmatically, instead of using the @Mock annotation.
+see example: https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-05/5_3_2/reservation-service/src/test/java/org/acme/reservation/ReservationResourceTest.java#L64
+
+
+### QuarkusTestResourceLifecycleManager 
+Responsible for controlling the lifecycle of external resources during Quarkus tests.
+
+It’s most commonly used to:
+- Start and stop Docker containers (via Testcontainers)
+- Launch embedded services (like Kafka, Redis, databases)
+- Set system properties or configuration values used by the app
+- Perform setup/teardown before and after tests
+
+```
+@QuarkusTest
+@QuarkusTestResource(PostgresTestResource.class)
+public class MyDatabaseTest {
+    // Will run with a real Postgres container
+}
+
+public class PostgresTestResource implements QuarkusTestResourceLifecycleManager {
+
+    private PostgreSQLContainer<?> postgres;
+
+    @Override
+    public Map<String, String> start() {
+        postgres = new PostgreSQLContainer<>("postgres:15")
+                .withDatabaseName("testdb")
+                .withUsername("test")
+                .withPassword("test");
+        postgres.start();
+
+        // Return properties to override application config
+        return Map.of(
+            "quarkus.datasource.jdbc.url", postgres.getJdbcUrl(),
+            "quarkus.datasource.username", postgres.getUsername(),
+            "quarkus.datasource.password", postgres.getPassword()
+        );
+    }
+
+    @Override
+    public void stop() {
+        if (postgres != null) {
+            postgres.stop();
+        }
+    }
+}
+
+```
+
+### Test Profiles and tags
+Use quarkus.test.profile.tags parameter to run specific tests (tests should have tags in this case)
+@QuarkusTestProfile is a powerful Quarkus testing feature that allows you to create custom test configurations — essentially, test profiles — to control how your Quarkus application behaves during testing.
+
+```
+public class StaggingProfile implements QuarkusTestProfile {
+    @Override
+    public Map<String, String> getConfigOverrides() {
+        return Map.of(
+            "path.to.service", "http://stagging.my.service.com/"
+        );
+    }
+
+    @Override
+    public String getConfigProfile() {
+        return "stagging";
+    }
+}
+
+----------------------
+@QuarkusTest
+@TestProfile(StaggingProfile.class)
+public class MyServiceStaggingTest {
+
+    @Test
+    void testWithStaggingService() {
+        // Will run with  "path.to.service", "http://stagging.my.service.com/"
+    }
+}
+```
+
+### Mocking. Importent!!!!
+- Native mode isn't supported for tests that use mocks or CDI injections into the test itself because the application under test runs in a different OS process that the testing logic.
+- Mocking is achieved either by replacing a CDI bean with an alternative implementation or by describing the mock's behavior using Mockito DSL
+
+
+## Chapter 6. Exposing and Security Web Applications
