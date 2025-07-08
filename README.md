@@ -238,3 +238,73 @@ The GraphQL schema is too large or changes frequently
 You don't want to generate Java models for all types
 
 You need to interact with remote GraphQL APIs flexibly
+
+### gRPC Support
+```
+quarkus extension add grpc
+```
+
+### gRPC CURL
+https://github.com/fullstorydev/grpcurl
+
+### Smallrye Mutiny
+https://smallrye.io/smallrye-mutiny/latest/
+Intuitive Event-Driven Reactive Programming Library. Is a replacement for StreamObserver that's used by protoc by default.
+
+### Developing Quarkus CLI applications
+Simple example: https://quarkus.io/guides/command-mode-reference
+PicoCLI (advanced ???) https://quarkus.io/guides/picocli
+
+
+## Chapter 5 Testing
+
+Quarkus supports testing in both JVM mode and native mode, and encourage you to test in both — especially if you're building native executables with GraalVM.
+Tests annotated with @QuarkusIntegrationTest are disabled by default in JVM mode. They are only executed when running tests in native or container mode, such as:
+
+```
+./mvnw verify -Dnative
+./mvnw verify -Dquarkus.package.type=fast-jar -Dquarkus.test.integration-test=true
+
+```
+
+### @DisableOnIntegrationTest
+The annotation @DisableOnIntegrationTest is a Quarkus testing utility annotation that allows you to skip specific tests when running in integration test mode (i.e., tests annotated with @QuarkusIntegrationTest or @NativeImageTest).
+Example:
+```
+@DisabledOnIntegrationTest(forArtifactTypes = {"native"})
+```
+
+✅ Use Cases:
+- A test only makes sense in JVM mode
+- A test uses mocking, in-memory DB, or features not supported in native mode
+- You're writing unit or fast tests that shouldn’t run during full integration testing
+
+### JVM tests vs Native tests
+- **./mvnw test** Runs tests in JVM mode Does not execute @QuarkusIntegrationTest or @NativeImageTest
+- **./mvnw verify** -Pnative Runs the full Maven lifecycle, including compile, test, package, and verify, Builds a native executable using GraalVM, Executes tests annotated with @QuarkusIntegrationTest and/or @NativeImageTest
+
+
+### Mocks
+There are 2 approaches described in this book:
+1. Mocking with CDI beans
+
+When you use @io.quarkus.test.Mock it applies @Alternative and @Priority(1) annotations to a mock bean 
+```
+import io.quarkus.test.Mock
+
+
+@Mock
+public class MockRestApiClient implements RestApiClient {
+
+    @Override
+    public List<Car> allCars() {
+        Car peugeot = new Car(1L, "ABC123", "Peugeot", "406");
+        return List.of(peugeot);
+    }
+}
+```
+2. Mockito Framework. 
+Mocking with Mockito, as opposed to using CDI alternatives, is not limited to using only CDI beans. 
+Any object can be replaced with a mock. When used with CDI, the bean has to be of a normal scope, 
+which means @Singleton and @Dependent beans can't be mocked out (because Mockito needs to use proxies for such beans,
+and these to scopes a non-proxyable). All other built-in CDI scopes will work.
