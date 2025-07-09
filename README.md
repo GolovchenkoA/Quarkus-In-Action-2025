@@ -798,3 +798,26 @@ Fault tolerance patterns:
 - Bulkhead - Limit the number of concurrent invocations of a certain operation. This prevents overloading the system.
 - Circuit breaker - If an operation fails a certain number of times, stop reattempting it for some amount of time (instead, throw an error when the operation is requested). This helps to prevent cascading failures.
 - Timeout - If an operation takes too long, abort it. This prevents the system from getting stuck and unresponsive.
+
+
+Adding the smallrye-fault-tolerance extension to a service:
+```
+$ quarkus extension add smallrye-fault-tolerance
+```
+
+`@Retry` and `@FallBack` examples can be found [here](https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-10/10_5_1/reservation-service/src/main/java/org/acme/reservation/rest/ReservationResource.java)
+
+
+### Service discovery
+
+if you can’t or don’t want to use the Kubernetes service discovery mechanism, Quarkus provides [SmallRye Stork](https://smallrye.io/smallrye-stork.), a library that implements an abstraction over different service discovery mechanisms, allowing you to easily swap between them. Kubernetes is one of the supported underlying mechanisms too, so you can use it together with Stork if you want the flexibility of switching to a different mechanism (for example, Consul).
+
+Stork supports the following mechanisms:
+- Consul
+- DNS
+- Kubernetes
+- KNative
+- Eureka
+- Composite (a combination of multiple mechanisms)
+- Static list (a hardcoded list of URLs)
+- Custom mechanism implemented as a Java class
