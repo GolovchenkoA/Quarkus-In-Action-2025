@@ -719,3 +719,82 @@ $ quarkus extension add smallrye-health
 ```
 
 [Custom Health Check example](https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-10/10_4_2/inventory-service/src/main/java/org/acme/inventory/health/CarCountCheck.java#L10)
+
+### Application metrics
+Generally, there are two kinds of metrics: 
+- framework metrics
+- application-specific (business) metrics.
+
+### Micrometer
+[Micrometer extension](https://micrometer.io) is the recommended way to work with metrics in Quarkus. Micrometer is a library that provides a common API for working with metrics, and it supports submitting metrics to monitoring backends, such as Prometheus, Graphite, SignalFX, or Datadog and others.
+⚠️ There is a built-in SmallRye Metrics extension that is compatible with MicroProfile Metrics 4.0, but it’s not recommended and it will be removed in a future release. Instead, the Micrometer extension is preferred as the way forward.
+
+
+### Micrometer Metric types
+More information can be found here https://docs.micrometer.io/micrometer/reference/concepts.html
+- Timer — Measures the time that it takes to execute a certain operation and generates a histogram of the measured times.
+- Counter — A simple counter that can only be incremented; it counts the number of occurrences of a particular event.
+- Gauge — A single numeric value that can change in any direction over time. An example would be the heap memory usage of the application.
+- Distribution summary — A histogram of numeric values, just like a timer but not necessarily tied to time-related measurements.
+
+### Micrometer metrics approaches
+2 approaches with the Micrometer library (https://quarkus.io/guides/telemetry-micrometer) and Quarkus: 
+- imperative (programmatic) -  is more flexible and allows for some more advanced 
+- declarative (using annotations) - is much easier and less verbose
+
+### Prometheus & Grafana
+- Prometheus is an engine for collecting, storing, and querying metrics. It periodically makes HTTP requests to an application’s endpoint.  In Quarkus, this endpoint is served by the micrometer extension and is available (by default) at `/q/metrics` (http://localhost:{port}/q/metrics)
+- Grafana is a dashboarding tool that can query the metrics from Prometheus and display them in a dashboard.
+
+How to add Prometheus library  https://quarkus.io/guides/telemetry-micrometer-tutorial
+```
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
+</dependency>
+```
+
+Grafana and Prometheus can be run using a docker file to collect the app metrics. The file can be found in `chapter-10/docker-compose-files/docker-compose-metrics.yml`. 
+```
+docker compose -f docker-compose-metrics.yml up
+```
+
+### Tracing
+**OpenTelemetry** (https://opentelemetry.io) was conceived by merging two former projects: OpenTracing and OpenCensus, is the most popular tracing library in the cloud-native world. Commonly referred to as OTel for short, is a collection of various tools and APIs that are used to collect and export telemetry data from applications. OpenTelemetry doesn’t only cover tracing. It also has capabilities for collecting metrics and logs, but these were not yet considered ready and stable, and thus not supported by Quarkus at the time of writing this book, so we will focus only on the tracing part.  It is a vendor-neutral and programming language-agnostic. It provides a common protocol (named OTLP) for exporting telemetry data from applications to a tool named OpenTelemetry Collector, which then centrally processes the data and forwards it to a backend (e.g., Jaeger).
+Usage of an **OpenTelemetry Collector** (a part of OpenTelemetry) is in most cases optional. Application frameworks may support exporting telemetry data directly to a backend without going through an OpenTelemetry Collector. For smaller-scale deployments, this is easier to set up and maintain, but for larger deployments, it is advised to use an OpenTelemetry Collector, because it can centrally add features like filtering, batching, and retrying in case of failures calling the backend (Jeager).
+**Jeager** is used for vizualization.
+
+![image](https://github.com/user-attachments/assets/4d5c4eb3-5862-4f70-85c8-c55d8e57f653)
+
+
+How to add OpenTelemetry [quarkus-opentelemetry library]((https://quarkus.io/guides/opentelemetry)) in a service that should send metrics:
+```
+quarkus extension add opentelemetry 
+```
+
+There are 2 options how to run Jeager:
+Directlry
+```
+docker run --rm -p 16686:16686 -p 4317:4317 docker.io/jaegertracing/all-in-one:1.62.0
+```
+
+Or use the docker file `chapter-10/docker-compose-files/docker-compose-tracing.yml`
+
+Both OpenTelemetry Collector and Jeager listen the port localhost:4317, so we do not need to configure anything in our application.
+
+Links:
+[Quarkus and OpenTelemetry](https://quarkus.io/guides/opentelemetry)
+[Quarkus and OpenTelemetry Tracing](https://quarkus.io/guides/opentelemetry-tracing). Examples how to add custom traces
+
+### Fault Tolerance
+[SmallRye Fault Tolerance documentation](https://smallrye.io/docs/smallrye-fault-tolerance/6.5.0/index.html)
+[MicroProfile Fault Tolerance Library](https://github.com/microprofile/microprofile-fault-tolerance)
+For Quarkus, the implementation of these strategies is provided by the quarkus-smallrye-fault-tolerance extension that brings in the SmallRye Fault Tolerance library.
+
+Fault tolerance patterns:
+
+- Retry —If an operation fails, retry it a certain number of times before propagating the failure back to the client.
+- Fallback - If an operation fails, execute a fallback instead—that is, an alternative operation that is less likely to fail.
+- Bulkhead - Limit the number of concurrent invocations of a certain operation. This prevents overloading the system.
+- Circuit breaker - If an operation fails a certain number of times, stop reattempting it for some amount of time (instead, throw an error when the operation is requested). This helps to prevent cascading failures.
+- Timeout - If an operation takes too long, abort it. This prevents the system from getting stuck and unresponsive.
