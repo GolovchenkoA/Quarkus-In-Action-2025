@@ -19,9 +19,10 @@
 
 ## Quarkus in Action 2025 links
 - Code https://github.com/xstefank/quarkus-in-action
-- Quick Starts https://github.com/quarkusio/quarkus-quickstarts
+- Quick Starts repositories https://github.com/quarkusio/quarkus-quickstarts
 - Quarkus Security https://quarkus.io/guides/security-overview
 - MicroProfile https://microprofile.io/
+- [Reactive System Architecture](https://medium.com/big-data-cloud-computing-and-distributed-systems/reactive-architecture-i-5652f944f8fb)
 - Migration Toolkit for Applications 7.3 https://docs.redhat.com/en/documentation/migration_toolkit_for_applications/7.3
 - Micronaut and Helidon (helidon.io)
 - HTTPIe https://httpie.io/download
@@ -134,7 +135,7 @@ target/*-runner
 |----------------|-------------------------------|---------------------------------------|
 | GraalVM CE     | Full polyglot VM + native image | General purpose, research, polyglot apps |
 | GraalVM EE     | Enterprise with optimizations  | High-performance, commercial support  |
-| **Mandrel**    | Native image for Quarkus       | Stable native builds, Red Hat supported |
+| Mandrel        | Native image for Quarkus       | Stable native builds, Red Hat supported |
 
 
 ### Native images generation
@@ -175,6 +176,9 @@ quarkus extension categories
 ## Chatper 3. Enchansing developer productivity with Quarkus
 
 ### Quarkus Dev Services 
+[Dev Services Docs](https://quarkus.io/guides/dev-services)
+[Dev Services For Databases Docs](https://quarkus.io/guides/databases-dev-services) 
+[Dev Services for Databases Zero Config](https://quarkus.io/guides/datasource)
 is a feature that automatically provisions and configures required services (like databases, Kafka, Redis, etc.) during development and testing—without needing you to manually start them.
 It’s designed to improve developer productivity by reducing setup time.
 
@@ -562,3 +566,156 @@ Quarkus supports [Virtual Threads](https://quarkus.io/guides/virtual-threads) an
 
 ## Project Loom
 Project Loom has known problems, for example, with [Pinning Virtual Threads](https://medium.com/@rakeshkpandit/resolving-virtual-thread-pinning-issues-in-java-442d0b55b603) and [Vitrual thread monopolizing](https://todd.ginsberg.com/post/java/virtual-thread-pinning/)
+
+
+## Chapter 9 Messaging
+Quarkus follows [MicroProfile messaging specification](https://microprofile.io/specifications/reactive-messaging/) and relies on [SmallRye Reactive Messaging library](https://smallrye.io/smallrye-reactive-messaging/smallrye-reactive-messaging/3.4/index.html) which implements the specification
+
+The MicroProfile messaging specification allows only `@ApplicationSocped` and `@Dependent` CDI scopes for CDI beans to be used in reactive messaging.
+The API conceptually consists of two main annotations: `@Outgoing` and `@Incoming`, which are used to either produce or consume messages.
+
+Examples:
+
+Producer:
+```
+@ApplicationScoped
+public class NumberProducer {
+
+    @Outgoing("ticks-out")
+    public Multi<Long> produceTicks() {
+        return Multi.createFrom()
+                    .ticks()
+                    .every(Duration.ofSeconds(1))
+                    .select()
+                    .first(5)
+                    .onItem().transform(tick -> System.currentTimeMillis()); // emit current time
+    }
+}
+```
+
+Processor:
+```
+@ApplicationScoped
+public class NumberProcessor {
+
+    @Incoming("ticks-out")
+    @Outgoing("processed-ticks")
+    public Multi<String> process(Multi<Long> ticks) {
+        return ticks.map(Instant::now::toString)
+    }
+}
+```
+
+Consumer:
+```
+@ApplicationScoped
+public class NumberLogger {
+
+    @Incoming("processed-ticks")
+    public void consume(String message) {
+        System.out.println("[Received] " + message);
+    }
+}
+```
+
+
+
+[Reactive System Architecture](https://medium.com/big-data-cloud-computing-and-distributed-systems/reactive-architecture-i-5652f944f8fb)
+MicroProfile Reactive Messaging is a specification within the [Eclipse MicroProfile project](https://microprofile.io/) designed to enable reactive stream-based communication between microservices and messaging systems like Kafka, AMQP, MQTT, etc.
+
+Service Provider Interface (SPI) in MicroProfile Reactive Messaging absolutely allows you to plug in external services — that's one of its core purposes.
+
+✅ SPI: Gateway to External Integration
+The SPI lets you create custom connectors that can:
+- Consume data from external services (e.g., REST APIs, WebSockets, gRPC, Redis)
+- Publish data to external services
+- Be plugged into MicroProfile Reactive Messaging pipelines just like Kafka or MQTT
+
+🔌 Real Use Cases
+| External Service|	What You Can Do With SPI|
+| -------------------- | ----------------------|
+| REST/HTTP APIs  |	Pull or push data periodically or on-demand|
+| Redis  |	Subscribe to pub/sub channels or streams|
+| WebSocket  |	Stream messages to/from a WebSocket server|
+| gRPC  |	Pipe reactive calls into channels|
+| Custom TCP socket  |	Bridge low-level networking into reactive channels|
+| Legacy JMS system  |	Wrap and adapt into a reactive model|
+
+
+### Acknowledgment strategies
+In Quarkus Reactive Messaging, when consuming messages, you can control what happens after processing a message using acknowledgment strategies. There are two main strategies for handling positive (ack) and negative (nack) acknowledgment:
+
+| Strategy            | How It Works                                                   | When to Use                    |
+| ------------------- | -------------------------------------------------------------- | ------------------------------ |
+| **Manual ack/nack** | Use `Message<T>` and call `msg.ack()` or `msg.nack(Throwable)` | For async or error-prone flows |
+| **Automatic ack**   | Quarkus handles ack/nack based on method completion/exception  | For simple processing          |
+
+
+### Acknowledgment Strategies
+Quarkus Reactive Messaging, the annotation @Acknowledgment allows you to control how and when message acknowledgments happen — especially useful when consuming messages from a broker like [Kafka](https://smallrye.io/smallrye-reactive-messaging/latest/kafka/receiving-kafka-records/#acknowledgement), MQTT, etc.
+
+✅ `@Acknowledgment(Acknowledgment.Strategy.XXX)` Summary Table
+| Strategy          | Ack Timing                    | Throws Exception →   | Use Case                             |
+| ----------------- | ----------------------------- | -------------------- | ------------------------------------ |
+| `NONE`            | Never (you must ack manually) | ❌ No auto-nack       | Full control, advanced error flows   |
+| `PRE_PROCESSING`  | Before method runs            | ✅ Already acked      | Fire-and-forget, no rollback needed  |
+| `POST_PROCESSING` (default strategy) | After method completes        | ❌ Auto-nack on error | Safe default, balanced strategy      |
+| `MANUAL`          | You call `ack()`/`nack()`     | ✅ You decide         | Same as `NONE`, but explicitly named |
+
+
+### Imperative declaration (CDI injection)
+You might not always be able to move to completely reactive code in all deployed system services. For this reason, MicroProfile Reactive Messaging provides a simple API to bridge the imperative and reactive worlds with the @Channel annotation. The @Channel annotation has two use cases: either to produce messages from imperative code or consume a channel into an instance of Publisher through a CDI injection.
+The second use case of @Channel is particularly useful for applications working with server-sent events (SSEs), which push the events from server to clients through an HTTP connection. We can use the @Channel annotation to inject instances of Reactive Streams (or Flow) Publisher or its subclasses as in our case the Mutiny’s Multi
+
+
+### Dependency conflicts
+ If you run into import conflicts, always use classes from the `org.eclipse.microprofile.reactive.messaging` package.
+
+### Connectors
+[Quarkus Messaging Extensions](https://quarkus.io/guides/messaging)
+
+```
+mp.messaging.incoming.{channel-name}.{attribute-name}=attribute-value
+mp.messaging.outgoing.{channel-name}.{attribute-name}=attribute-value
+mp.messaging.connector.{connector-name}.{attribute-name}=attribute-value
+```
+
+⚠️ The configuration of channels (channel-name) overrides the global configuration of connectors (connector-name). It is important to point out that all configuration for channels is specific to either the incoming or the outgoing direction. This means that if we use the same channel (channel-name) for both producing and consuming of messages (i.e., reactive streams’ processor), we need to configure each direction separately, even if they use the same connector.
+
+
+
+
+## Chapter 10 Cloud-native application patterns
+Health, Tracing, Metrics, and Fault Tolerance are part of [MicroProfile Specifications](https://microprofile.io/specifications/). Service Discovery is not part of it at the time of writing but may well be in the future.
+⚠️ Health, metrics, and tracing (and also logging) are very often together called observability.
+ 
+- Health—Applications should expose information about their health so that various kinds of their problems can be detected (either by a human operator or automatically). An application is unhealthy if some of its components or external connections don’t work as needed—for example, if a database connection isn’t working, a deadlock is detected, or the memory heap is full. Human operators or automated tools can then respond to this information and take appropriate action, such as restarting the application.
+- Metrics—Metrics are similar to health checks in that they convey information about the status of an application. However, unlike health checks whose outcome is binary (good or bad), metrics are numeric values. They can tell how much memory is used, how many threads in a thread pool are usually busy, how many requests are being processed per minute, and so on. You may create automated alerts for metrics—for example, to receive an email when an application’s memory usage exceeds a certain threshold.
+- Tracing—Tracing allows you to follow (visually) a request as it flows through multiple components and services. This is useful for troubleshooting purposes and can help to find performance bottlenecks.
+- Fault tolerance—Fault tolerance allows applications to gracefully deal with failures. For example, they can retry a request to a failing external service instead of propagating the failure to the caller.
+- Service discovery—Service discovery is a way of dynamically finding the location of services that your application needs to interact with, allowing you to decouple the location of those services from your configuration. This makes deployments more robust and adaptable to changes.
+
+### SmallRye
+SmallRye (https://smallrye.io) is a set of implementations of the MicroProfile specifications. We said that Quarkus is also a MicroProfile implementation, so this begs for a bit of explanation. Each SmallRye project implements one of the MicroProfile specifications. Quarkus then provides an extension per each SmallRye project that integrates the SmallRye implementation into Quarkus and allows you to use it in your applications.
+
+
+### Monitoring application health
+
+The implementation of MicroProfile Health in Quarkus is SmallRye Health (integrated in the smallrye-health extension).
+
+There are 5 kinds of health checks in SmallRye Health:
+- Liveness
+- Readiness
+- Startup
+- Wellness (not a part of MicroProfile specification)
+- Custom health group (defined by users and not a part of MicroProfile specification)
+
+### Database connection health check
+When your application uses a JDBC data source, Quarkus automatically adds a readiness health check that verifies that the database connection is working. When the database is unavailable, the `readiness check` fails, saying that the application can’t process requests right now. Let’s try it out with the Inventory service with its MySQL connection.
+
+quarkus-smallrye-health extension:
+```
+$ quarkus extension add smallrye-health
+```
+
+[Custom Health Check example](https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-10/10_4_2/inventory-service/src/main/java/org/acme/inventory/health/CarCountCheck.java#L10)
