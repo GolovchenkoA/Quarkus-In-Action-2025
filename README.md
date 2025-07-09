@@ -821,3 +821,122 @@ Stork supports the following mechanisms:
 - Composite (a combination of multiple mechanisms)
 - Static list (a hardcoded list of URLs)
 - Custom mechanism implemented as a Java class
+
+
+## Chapter 11 Quarkus in the cloud
+
+![image](https://github.com/user-attachments/assets/a689817d-13b3-4f7c-9aba-097d6c8618d0)
+
+
+### Running the application in Dev mode
+Run Jaeger, Prometheus, and Grafana
+```
+$ docker compose -f docker-compose-files/docker-compose-observability
+.yml up
+```
+
+Run the rest services:
+- User Service and Keycloak container
+```
+cd chapter-11/11_1/users-service
+quarkus dev
+```
+- Reservation service and PostgreSQL and RabbitMQ containers.
+ ```
+cd chapter-11/11_1/reservation-service
+quarkus dev
+```
+- Rental service and  MongoDB and Redpanda containers.
+ ```
+cd chapter-11/11_1/chapter-11/11_1/rental-service
+quarkus dev
+```
+- Inventory Service and MySQL
+```
+cd chapter-11/11_1/chapter-11/11_1/inventory-service
+quarkus dev
+```
+- Billing Service and MongoDB
+```
+cd chapter-11/11_1/chapter-11/11_1/billing-service
+quarkus dev
+```
+
+## Running the application in production
+
+![image](https://github.com/user-attachments/assets/ce393508-45a1-454b-a57a-452a094fc305)
+Pay attention that KeyCloak now has a separate PostgreSQL DB and RedPanda is replaced by Kafka
+
+
+
+There are 2 MongoDB instances. They should be run on differen ports.
+
+To support Graphql UI in prod add the property below. UI also will be available in Dev environment (http://localhost:8083/q/graphql-ui)
+```
+quarkus.smallrye-graphql.ui.always-include=true
+```
+
+ In prod mode, loading SQL scripts is disabled by default. To enable it use 
+```
+quarkus.hibernate-orm.sql-load-script=import.sql
+```
+
+To disable it in Dev mode set 
+```
+%dev.quarkus.hibernate-orm.sql-load-script=nonexistent-file
+```
+
+**Run the App in production**
+1.Open the following directories, each in a new terminal, and run `quarkus build` (`./mvnw clean package`) followed by `java -jar target/quarkus-app/quarkus-run.jar`:
+TODO: what the difference comparing to `quarkus build --native --container-image`
+```
+chapter-11/11_1_1/users-service
+chapter-11/11_1_1/reservation-service
+chapter-11/11_1_1/rental-service
+chapter-11/11_1_1/inventory-service
+chapter-11/11_1_1/billing-service
+```
+2.Use `chapter-11/docker-compose-files/docker-compose-infra.yml` to run all supported containers like KeyCloak, MongoDB, MySQL, Kafka, etc..
+```
+$ docker compose -f docker-compose-files/docker-compose-infra.yml up
+$ docker compose -f docker-compose-files/docker-compose-infra.yml down
+```
+3. Run the builded docker images
+``
+docker compose -f docker-compose-files/docker-compose-car-rental.yml up
+docker compose -f docker-compose-files/docker-compose-car-rental.yml down
+``
+
+### Removing hardcoded URLs
+We going to get rid of hardcoded URLs like  `@RegisterRestClient(baseUri = "http://localhost:8081")`
+There are 2 ways:
+- `@RegisterRestClient(configKey = "reservations")` + updating application.properties `quarkus.rest-client.reservations.url=http://localhost:8081`
+- It’s also possible to override the REST client’s URL without specifying a custom config key—the default config key is the fully qualified name of the interface. In that case, the property would be `quarkus.rest-client."org .acme.users.ReservationsClient".url=http://localhost:8081`
+
+### Credentials in the application.properties 
+Is not the best idea. However, it is the easiest for our use case. In the real production deployment, you could externalize this configuration in many ways (different config locations, environment variables, system properties, Kubernetes secrets).
+
+
+### Building and pushing container images
+https://quarkus.io/guides/container-image
+Quarkus also provides [five extensions](https://quarkus.io/guides/container-image) that provide automation of the image building and pushing:
+- Jib - quarkus-container-image-jib
+- Docker - quarkus-container-image-docker
+- Buildpack - quarkus-container-image-buildpack
+- Podman - quarkus-container-image-podman
+- OpenShift - quarkus-container-image-openshift. This extension uses OpenShift-specific binary builds. Such a build takes your built artifact (and dependencies) and uploads it to the OpenShift cluster. OpenShift then builds the application image automatically in the OpenShift build system. This is also called s2i (source to image). From the user’s point of view, you don’t need to do anything. The extension generates everything required for your s2i build to complete successfully.
+
+### Building images with Quarkus without extensions
+We don’t need to add the extensions mentioned previously to our Quarkus application to start building images. Quarkus CLI quarkus already ships with built-in commands that we can use. For instance, to create an image with Jib, you can use the command in the following listing that we can test—for example, in the Reservation service.
+
+Note  This functionality also works with the Maven plugin (./mvnw quarkus :image-build) but not with Gradle. Maven supports adding dynamic dependencies, but Gradle doesn’t. The CLI works in both cases because it implements a workaround for Gradle (which is not applicable when running a Gradle task directly).
+
+How to build an image. Command accepts `jib, docker, podman, buildpack, and openshift` parameters. openshift requires a connection to the OpenShift cluster and the manifests (that are generated by either openshift or kubernetes extensions)
+```
+quarkus image build jib
+```
+
+Pushing the image:
+```
+quarkus image push
+```
