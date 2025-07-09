@@ -529,9 +529,10 @@ There are 2 programming styles: Imperative and Declarative. See [From sequential
 Reactive programming is harder then imperative programming. However, the performance of the reactive programming (eventloops) outperforms imperative programming in systems with high level of concurrency and I/O operations. Project Loom allows to write code in imperative style and have reactive application at the same time. Apart of that the project aims to enhance Java’s concurrency model by introducing fibers, which are lightweight threads managed by the JVM.
 
 **When to use Virtual threads**
-|Task Type|	Thread Type|
-|I/O-bound|	✅ Virtual threads|
-|CPU-bound|	✅ Platform threads, ForkJoinPool, or ExecutorService with bounded pools|
+|Task Type  |	Thread Type  |
+| -------------------- | ----------------------|
+|I/O-bound  |	✅ Virtual threads  |
+|CPU-bound  |	✅ Platform threads, ForkJoinPool, or ExecutorService with bounded pools|  
 
 ❌ Overusing Virtual Threads for Computation
 ⚠️ Using too many virtual threads for CPU-bound (compute-heavy) tasks can degrade performance.
