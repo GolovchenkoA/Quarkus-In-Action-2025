@@ -959,3 +959,139 @@ Kubernetes\OpenShift cluster setup is not covered in this book. But if you would
 - K3s (https://k3s.io)
 - Minikube (https://minikube.sigs.k8s.io/docs)
 - Some online (often paid) Kubernetes platform is also an option.
+
+
+## Chapter 11 Kubernetes and OpenShift integration
+In [Kubernetes extension manual](https://quarkus.io/guides/deploying-to-kubernetes) you can find how to deply Quarkus apps on Kubernetes. There are different features including [Service Binding](https://quarkus.io/guides/deploying-to-kubernetes#service_binding) that allows not only generate a kubernetes manifest and deploy your application, but also includ configuration for an additional service that your app required, for example, a DB.
+⚠️ In this course they say there is a simpler way to deploy a DB with the application. we just need to copy `mysql.yaml` config into `chapter-11/11_3_3/inventory-service/src/main/kubernetes/kubernetes.yml` and that't it. There is no need to apply `quarkus-kubernetes-service-binding` extension.
+
+There is a db URL in our `application.properties`, if we want to override this property for kubernetes we should provide both properties: 
+```
+%prod.quarkus.datasource.jdbc.url=jdbc:mysql://localhost:3306/quarkus
+quarkus.kubernetes.env.vars.quarkus-datasource-jdbc-url=jdbc:mysql://mysql:3306/inventory # where 'mysql' is name from kubernetes manifest ??
+```
+
+Also Kubernetes requires a namespace property
+```
+quarkus.kubernetes.namespace=default
+```
+
+Applying the manifest
+```
+kubectl apply -f inventory-service/target/kubernetes/kubernetes.yml
+```
+
+Inventory service logs available at http://localhost:8083/q/graphql-ui or check its logs with `kubectl logs deployment/inventory-service`.
+
+### Automating Kubernetes deployments
+With a single build time flag `quarkus.kubernetes.deploy=true`, we can, in one command,
+
+- Build our Quarkus application and its image.
+- Push the built image to the registry.
+- Apply/reapply the generated manifest to the Kubernetes cluster.
+
+Example:
+```
+./mvnw clean package -Dquarkus.kubernetes.deploy=true
+```
+
+### Openshift
+[Openshift](https://www.redhat.com/en/technologies/cloud-computing/openshift) is a Red Hat-branded version fork of Kubernetes that provides additional features, easier management, and (opinionated) better usability. Most of the features we covered for Kubernetes in the previous sections apply also to OpenShift. We decided to focus on OpenShift because  it comes with:
+- ⚠️ new resources, intuitive UI,
+- ⚠️ and most importantly, a free public OpenShift instance called Sandbox that you can use for your testing.
+
+You don’t need to install almost anything (besides the client-side tool, oc) on your local systems to experiment with Quarkus on OpenShift!
+Ff you would like to try OpenShift on your local system, you can use the [OpenShift Local](https://developers.redhat.com/products/openshift-local/overview). OpenShift Local provides functionality similar to Minikube for Kubernetes.
+Link: [Deploying Quarkus applications to OpenShift](https://quarkus.io/guides/deploying-to-openshift)
+
+### Apply OpenShift
+- remove Kubernetes extension `$ quarkus ext remove kubernetes`
+- remove Docker extension of set OpenShift as a default image builder
+```
+quarkus.container-image.builder=openshift
+```
+Once you build the application `openshift.yml` and `openshift.json` files will be generated
+
+To include the MySQL configuratio to deployment put it in `src/main/kubernetes directory/openshift.yml`
+Examples can be found [here](https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-11/openshift/openshift-default.yml)
+After building the application and manifests, we can now directly apply the generated openshift.yml (remember that you first need to log in the same terminal where you run these commands), which produces several resources with the `oc` tool, as follows:
+```
+$ oc apply -f inventory-service/target/kubernetes/openshift.yml
+$ oc get pods
+$ oc get routes
+$ oc whoami --show-console
+```
+
+We can navigate to the exposed Inventory service route URL by going to `<your-url>` or clicking the route button as shown in figure 11.5. Change the path to `http:// <your-url>/q/graphql-ui`, and you will see the familiar UI of the Inventory service now running in OpenShift! 
+
+### Automating OpenShift deployment with s2i
+We’ve prepared the BuildConfig resource to trigger application redeploy when the s2i build finishes. However, because we configured `quarkus.container-image.* properties`, Quarkus automatically picks them to align generated manifests to point to the deployed image. If we want to utilize the image built with s2i, we need to remove them. To remove the need to have them specified whenever we build or push images (if we decide to do so again), we can define a custom s2i configuration profile that removes these properties (listing 11.16).
+
+Listing 11.16 The s2i profile removing container image properties
+```
+%s2i.quarkus.container-image.registry=
+%s2i.quarkus.container-image.group=
+%s2i.quarkus.container-image.tag=
+```
+If you now regenerate openshift.yml with the s2i profile active, it points to the `inventory-service:1.0.0-SNAPSHOT` image, which corresponds to the ImageStreamTag produced by our BuildConfig. To trigger the s2i build, we can run the following command that sets the required flags to use our new config profile (in addition to the prod profile) and to trigger an s2i build:
+```
+$ ./mvnw clean package -Dquarkus.profile=prod,s2i -Dquarkus.openshift.deploy=true
+```
+
+### Kubernetes and OpenShift clients
+We have utilized various management tools (kubectl or oc) that have allowed us to manage our Kubernetes or OpenShift platforms.
+While there are other ways to deploy Quarkus applications (e.g., `OpenShift UI` or `oc new-app` command), they all require manual steps.
+Quarkus also allows us to define our deployment workflow in Java directly in the Quarkus application. For this reason, ⚠️ Quarkus provides 
+- `extensions—quarkus-kubernetes-client`
+-  `quarkus-openshift-client`
+  that integrate [Fabric8 client](https://github.com/fabric8io/kubernetes-client). The Fabric8 library provides programmatic access to the Kubernetes and OpenShift REST API. See [example](https://github.com/xstefank/quarkus-in-action/blob/0a7e10d43fd36a2f29104900418b91941b814233/chapter-11/11_4/openshift-client-example/src/main/java/org/acme/PodResource.java)
+
+### Serverless application with Quarkus
+There are several serverless platforms (aka FaaS, Function as a Service) on the market (e.g., Knative, AWS Lambda, Google Cloud Functions, Azure Functions).
+
+### Funqy library
+[Quarkus Funqy Docs](https://quarkus.io/guides/funqy)
+Each provides its own Java API that can be utilized in your Quarkus application. But each API is different, meaning using such API locks your application to a particular platform.
+
+Quarkus’s serverless strategy is based on the library called `Funqy`. The library provides a unified API that abstracts all FaaS platforms mentioned earlier. It represents a very simple API that we can use to develop Quarkus serverless applications.
+
+Example use of the Funqy API
+ ```
+import io.quarkus.funqy.Funq;
+
+public class Function {
+    @Funq
+    public String process(String input) {
+        return "Processed: " + input;
+    }
+}
+```
+
+### Car statistics application with Knative
+In this section, we develop a new but totally optional service called `car-statistics` that we deploy as a serverless function with Knative. We chose Knative as the easiest platform to utilize since it is preinstalled already in the OpenShift Sandbox (refer to 11.6.1 for setup instructions) in its Red Hat-branded product version called OpenShift Serverless. It calls our deployed Inventory service using GraphQL to return some statistics of currently tracked cars. Since a service like this doesn’t need to run all the time, it’s a perfect target for serverless because at times when we don’t need the data, we don’t need to keep the application running.
+
+⚠️If you’re using the OpenShift Sandbox, you can start right away. If you’re using custom OpenShift or Kubernetes, you must install [Knative](https://knative.dev/docs/install/) manually .
+
+Create a new Quarkus car-statistics application:
+```
+quarkus create app org.acme:car-statistics -P 3.15.1 --extension \
+funqy-http,smallrye-graphql-client,openshift --no-code
+```
+Full application example can be found here [Car-statistics](https://github.com/xstefank/quarkus-in-action/tree/0a7e10d43fd36a2f29104900418b91941b814233/chapter-11/11_5_3/car-statistics)
+
+⚠️If you’re using the prepared solution from the book’s resources, don’t forget to change the quarkus.container-image.group to your OpenShift namespace.
+
+The `quarkus.kubernetes.deployment-target` comes from the underlying Kubernetes extension (since Knative is not specific to OpenShift). It specifies what resources Quarkus generates. The possible values include `kubernetes`, `openshift`, `knative`, `minikube`, and `kind` or any combination of these values. 
+
+Deployment:
+```
+$ ./mvnw clean package -Dquarkus.knative.deploy=true
+```
+This command triggers an s2i build of our `car-statistics` application that we configured our Knative function to point to in listing 11.19. You can verify this in the generated `knative.yml/json` files in the `target/kubernetes` directory.
+The app is availabe by the following URL `http http://<your-route>/getCarStatistics`
+
+For more information read [Quarkus Funqy Docs](https://quarkus.io/guides/funqy)
+
+### Setting up OpenShift Sandbox
+The Sandbox is a free (30 days⚠️), testing, development-targeted, and shared OpenShift cluster with 14 GB of RAM and 40 GB storage for 30 days.
+To start with OpenShift Sandbox, navigate to `https://dn.dev/rhd-sandbox` and click the Start your sandbox for free button
