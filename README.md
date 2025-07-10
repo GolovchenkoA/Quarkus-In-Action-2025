@@ -1094,4 +1094,42 @@ For more information read [Quarkus Funqy Docs](https://quarkus.io/guides/funqy)
 
 ### Setting up OpenShift Sandbox
 The Sandbox is a free (30 days⚠️), testing, development-targeted, and shared OpenShift cluster with 14 GB of RAM and 40 GB storage for 30 days.
-To start with OpenShift Sandbox, navigate to `https://dn.dev/rhd-sandbox` and click the Start your sandbox for free button
+To start with OpenShift Sandbox, navigate to [sandbox](https://dn.dev/rhd-sandbox) and click the Start your sandbox for free button.
+we always log in with the DevSandbox account into the <your-username>-dev project (namespace). After you log in (by clicking the DevSandbox button),
+
+How to download [OC CLI Tool](https://docs.redhat.com/en/documentation/openshift_container_platform/4.7/html/cli_tools/openshift-cli-oc#cli-getting-started)
+[How to access the OpenShift from local system](https://www.ibm.com/support/pages/how-access-openshift-local-system)
+
+### Car rental infrastructure deployment with OpenShift Sandbox
+```
+ oc apply -f car-rental/car-rental-dependent-services.yml
+ oc delete -f car-rental/car-rental-dependent-services.yml
+```
+
+Final settings for all the services can be found [here](https://github.com/xstefank/quarkus-in-action/tree/0a7e10d43fd36a2f29104900418b91941b814233/acme-car-rental)
+
+
+## Chapter 12 Custom Quarkus extensions
+If you ever decide to create a new Quarkus extension, and you believe that it might be useful for others, you can have it published in the Quarkiverse (https://quarkiverse.io, https://github.com/quarkiverse). We already discussed this at the end of chapter 2. That also means that before you actually decide to write a new extension, you should check the Quarkiverse to see if someone has already created a similar one!
+
+[Writing your own extension](https://quarkus.io/guides/writing-extensions)
+[Building my first extension](https://quarkus.io/guides/building-my-first-extension)
+
+### Modules
+Some Quarkus extensions also generate new bytecode or modify existing bytecode directly, without using a recorder. For that, they make use of a tool called Gizmo. Gizmo (https://github.com/quarkusio/gizmo) is a project that provides an API for generating and manipulating JVM bytecode. A typical use case for this is reducing runtime usage of Java reflection by generating bytecode that directly invokes a method instead of using reflection to find and invoke it.
+
+### Kotlin Support
+[Kotlin Support Docs](https://quarkus.io/guides/kotlin)
+
+
+### Quarkus FE Tools
+### Quinoa
+Quinoa is a Quarkus extension whose goal is to ease development, building, and deploying of single-page web applications. It is compatible with any framework that uses NodeJS for building (React, Angular, Vue, etc.). You quickly get a full-stack Quarkus single-page application and benefit from all the Quarkus eco-system (full-stack dev mode, GraphQL, REST endpoints, messaging, etc.).
+
+
+More information [here](https://docs.quarkiverse.io/quarkus-quinoa/dev/index.html).
+
+### Renarde
+Quarkus Renarde is a new server-side rendered Web Application framework based on Quarkus. Its main role is to bind together Qute, Hibernate, and RESTEasy Reactive by creating a concise MVC (Model-View-Controller) layer over them.
+
+More information [here](https://docs.quarkiverse.io/quarkus-renarde/dev/index.html)
