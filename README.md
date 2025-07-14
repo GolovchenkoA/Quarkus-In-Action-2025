@@ -162,6 +162,21 @@ Quarkus supports native image generation out of the box using GraalVM (or contai
 quarkus build --native
 ```
 
+Building a native Image without GraalVM. 
+Source: [Creating a Linux executable without GraalVM installed](https://quarkus.io/guides/building-native-image#container-runtime)
+
+```
+quarkus build --native --no-tests -Dquarkus.native.container-build=true
+# The --no-tests flag is required only on Windows and macOS.
+```
+
+By default, Quarkus automatically detects the container runtime. If you want to explicitly select the container runtime, you can do it with:
+```
+quarkus build --native -Dquarkus.native.container-build=true -Dquarkus.native.container-runtime=docker
+or
+quarkus build --native -Dquarkus.native.container-build=true -Dquarkus.native.container-runtime=podman
+```
+
 
 ### How to list installed extensions
 List extension for quarkus app if run from the app's directory or list all available quarkus extensions if run from any other directory
